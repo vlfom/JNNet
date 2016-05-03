@@ -1,3 +1,4 @@
+import utils.Pair;
 import utils.Vector2D;
 import utils.VectorMath;
 
@@ -17,5 +18,6 @@ public class Main {
 
         NeuralNetwork net = new NeuralNetwork(3, new int[]{3, 4, 5});
         net.feedForwardPropagation(new Vector2D(3));
+        net.backPropagation(new Vector2D(3), new Vector2D(5));
     }
 }

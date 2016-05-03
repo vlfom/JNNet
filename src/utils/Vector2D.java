@@ -49,6 +49,24 @@ public class Vector2D {
         return v;
     }
 
+    public Vector2D sub(double x) {
+        Vector2D v = new Vector2D(l1, l2);
+        for (int i = 0; i < l1; ++i)
+            for (int j = 0; j < l2; ++j)
+                v.val[i][j] = val[i][j] - x;
+        return v;
+    }
+
+    public Vector2D sub(Vector2D x) {
+        if (x.l1 != l1 || x.l2 != l2)
+            throw new RuntimeException("Vector2D lengths must be equal");
+        Vector2D v = new Vector2D(l1, l2);
+        for (int i = 0; i < l1; ++i)
+            for (int j = 0; j < l2; ++j)
+                v.val[i][j] = val[i][j] - x.val[i][j];
+        return v;
+    }
+
     public Vector2D mul(double x) {
         Vector2D v = new Vector2D(l1, l2);
         for (int i = 0; i < l1; ++i)
@@ -117,6 +135,10 @@ public class Vector2D {
         this.l1 = l1;
         this.l2 = l2;
         val = new double[l1][l2];
+    }
+
+    public void printShape() {
+        System.out.println("[" + l1 + ", " + l2 + "]");
     }
 
     @Override
