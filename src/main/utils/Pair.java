@@ -4,7 +4,6 @@ package utils;
  * Created by @vlfom.
  */
 public class Pair<T> {
-
     private T first;
     private T second;
 
@@ -32,5 +31,12 @@ public class Pair<T> {
 
     public void setSecond (T second) {
         this.second = second;
+    }
+
+    @Override
+    public boolean equals (Object obj) {
+        if (!(obj instanceof Pair))
+            return false;
+        return (first == ((Pair) obj).first) && (second == ((Pair) obj).second);
     }
 }

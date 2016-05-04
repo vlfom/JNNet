@@ -12,6 +12,6 @@ public class ActivationFunction {
     }
 
     public static Vector2D sigmoidDerivaive(Vector2D x) {
-        return x.mul(VectorMath.ones(x).sub(x));
+        return sigmoid(x).mul(VectorMath.ones(x).sub(sigmoid(x)));
     }
 }
