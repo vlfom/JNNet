@@ -1,8 +1,5 @@
-package utils;
+package com.vlfom.utils;
 
-import com.sun.deploy.config.VerboseDefaultConfig;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

@@ -1,8 +1,10 @@
-import utils.Pair;
-import utils.Vector2D;
-import utils.VectorMath;
+package com.vlfom;
 
-import java.util.ArrayList;
+import com.vlfom.metrics.Metrics;
+import com.vlfom.utils.Pair;
+import com.vlfom.utils.Vector2D;
+import com.vlfom.utils.VectorMath;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -91,28 +93,14 @@ public class NeuralNetwork {
         }
     }
 
-    public double evaluateScore(List<Pair<Vector2D>> testData) {
-        Vector2D caseResult;
-        int score = 0;
-        int ind = 0;
-        for (Pair<Vector2D> testCase : testData) {
-            ind += 1;
-            caseResult = feedforwardPropagation(testCase.getFirst());
-            if (caseResult.argMax().equals(testCase.getSecond().argMax())) {
-                score += 1;
-            }
-        }
-        return score * 1.0 / testData.size();
-    }
-
     public void launchSGD(List<Pair<Vector2D>> trainData, List<Pair<Vector2D>> testData, int epochsCount, int batchSize,
-                          double learningRate) {
+                          double learningRate, Metrics metrics) {
         for (int e = 0; e < epochsCount; ++e) {
             Collections.shuffle(trainData);
             for (int i = batchSize; i <= trainData.size(); i += batchSize) {
                 updateMiniBatch(trainData.subList(i-batchSize, i), learningRate);
             }
-            System.out.printf("Epoch: %d. Score: %.3f\n", e, evaluateScore(testData));
+            System.out.printf("Epoch: %d. Score: %.3f\n", e, metrics.evaluateScore(this, testData));
         }
     }
 

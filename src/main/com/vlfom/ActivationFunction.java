@@ -1,5 +1,7 @@
-import utils.Vector2D;
-import utils.VectorMath;
+package com.vlfom;
+
+import com.vlfom.utils.Vector2D;
+import com.vlfom.utils.VectorMath;
 
 /**
  * Created by @vlfom.

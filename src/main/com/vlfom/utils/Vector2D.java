@@ -1,4 +1,4 @@
-package utils;
+package com.vlfom.utils;
 
 /**
  * Created by @vlfom.
