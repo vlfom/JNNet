@@ -18,6 +18,9 @@ public class LayersConnection extends JComponent {
     }
 
     private void drawArrow(Graphics2D g2, Point tail, Point head) {
+        Stroke dashed = new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5}, 0);
+        g2.setStroke(dashed);
+
         g2.drawLine(
                 (int) tail.getX(), (int) tail.getY(),
                 (int) head.getX(), (int) head.getY()
@@ -47,8 +50,8 @@ public class LayersConnection extends JComponent {
         locLeft = (Point) left.getLocation().clone();
         locRight = (Point) right.getLocation().clone();
 
-        locLeft.translate(-26, 80);
-        locRight.translate(-26 - Layer.WIDTH, 80);
+        locLeft.translate(Layer.WIDTH, 160);
+        locRight.translate(0, 160);
 
         locLeft.translate(0, -50);
         locRight.translate(0, -50);
@@ -70,8 +73,8 @@ public class LayersConnection extends JComponent {
         locLeft = (Point) left.getLocation().clone();
         locRight = (Point) right.getLocation().clone();
 
-        locLeft.translate(-26, 80);
-        locRight.translate(-26 - Layer.WIDTH, 80);
+        locLeft.translate(Layer.WIDTH, 160);
+        locRight.translate(0, 160);
 
         locLeft.translate(0, -50);
         locRight.translate(0, -50);
@@ -90,8 +93,8 @@ public class LayersConnection extends JComponent {
         locLeft = (Point) left.getLocation().clone();
         locRight = (Point) right.getLocation().clone();
 
-        locLeft.translate(-26, 80);
-        locRight.translate(-26 - Layer.WIDTH, 80);
+        locLeft.translate(Layer.WIDTH, 160);
+        locRight.translate(0, 160);
 
         locLeft.translate(0, -50);
         locRight.translate(0, -50);

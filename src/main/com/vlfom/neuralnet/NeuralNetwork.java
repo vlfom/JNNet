@@ -54,6 +54,10 @@ public class NeuralNetwork implements Serializable {
         }
     }
 
+    public int getLayersCount() {
+        return numLayers;
+    }
+
     public void addLayer(int layerSize) {
         numLayers += 1;
         layerSizes.add(layerSize);

@@ -29,18 +29,25 @@ import java.util.Scanner;
 import java.util.regex.Pattern;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 
 public class MainWindow extends JFrame {
     private NeuralNetwork net;
+    private JPanel leftPanel;
+    private JPanel mainPanel;
+    private JPanel bottomPanel;
 
     private void clearScreen() {
-        getContentPane().removeAll();
-        repaint();
+        mainPanel.removeAll();
+        mainPanel.revalidate();
+        mainPanel.repaint();
     }
 
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         menuBar.setPreferredSize(new Dimension(1600, 25));
+        menuBar.setBackground(new Color(232, 232, 232));
+
         Font font = new Font("Monospace", Font.PLAIN, 14);
 
         JMenu fileMenu = new JMenu("File");
@@ -170,7 +177,83 @@ public class MainWindow extends JFrame {
             picture.addMouseMotionListener(movingAdapter);
         }
 
+        picturePanel.setOpaque(true);
+        picturePanel.setBackground(new Color(0,0,0,0));
         add(picturePanel);
+        revalidate();
+        repaint();
+    }
+
+    private void addLeftPanel() {
+        leftPanel = new JPanel(null);
+
+        leftPanel.setBounds(0, 0, 250, 600);
+        leftPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 1, new Color(160, 160, 160)));
+        leftPanel.setBackground(new Color(255, 255, 255));
+
+        JPanel header = new JPanel(null);
+        header.setBounds(0, 0, 250, 20);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(160, 160, 160)));
+        header.setBackground(new Color(232, 232, 232));
+
+        JLabel headerTitle = new JLabel("Object browser");
+        headerTitle.setBackground(new Color(0, 0, 0, 0));
+        headerTitle.setFont(new Font("Monospace", Font.PLAIN, 13));
+        headerTitle.setOpaque(true);
+        headerTitle.setBounds(9, 0, 244, 18);
+        headerTitle.setSize(new Dimension(249, 19));
+
+        header.add(headerTitle);
+
+        leftPanel.add(header);
+
+        add(leftPanel);
+
+        revalidate();
+        repaint();
+    }
+
+    private void addBottomPanel() {
+        bottomPanel = new JPanel(null);
+
+        bottomPanel.setBounds(0, 600, 1600, 300);
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(160, 160, 160)));
+        bottomPanel.setBackground(new Color(255, 255, 255));
+
+        JPanel header = new JPanel(null);
+        header.setBounds(0, 0, 1600, 20);
+        header.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(160, 160, 160)));
+        header.setBackground(new Color(232, 232, 232));
+        bottomPanel.add(header);
+
+        JPanel leftSubPanel = new JPanel(null);
+        leftSubPanel.setBounds(0, 20, 20, 300);
+        leftSubPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(160, 160, 160)));
+        leftSubPanel.setBackground(new Color(232, 232, 232));
+        bottomPanel.add(leftSubPanel);
+
+        JLabel headerTitle = new JLabel("Logs");
+        headerTitle.setBackground(new Color(0, 0, 0, 0));
+        headerTitle.setFont(new Font("Monospace", Font.PLAIN, 13));
+        headerTitle.setOpaque(true);
+        headerTitle.setBounds(9, 0, 244, 18);
+        headerTitle.setSize(new Dimension(249, 19));
+        header.add(headerTitle);
+
+        add(bottomPanel);
+
+        revalidate();
+        repaint();
+    }
+
+    public void addMainPanel() {
+        mainPanel = new JPanel(null);
+
+        mainPanel.setBounds(250, 0, 1350, 600);
+        mainPanel.setBackground(new Color(255, 255, 255));
+
+        add(mainPanel);
+
         revalidate();
         repaint();
     }
@@ -181,23 +264,52 @@ public class MainWindow extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(1600, 900));
         setJMenuBar(createMenuBar());
+        setLayout(null);
+
+//        JPanel panel = new JPanel(null);
+//        JPanel header = new JPanel(null);
+//        Component component = new Component() {
+//            @Override
+//            public void paint(Graphics g) {
+//                g.setColor(Color.BLACK);
+//                g.fillRect(100, 100, 500, 500);
+//            }
+//        };
+//        component.setBounds(0, 0, 600, 600);
+//        header.setBounds(100, 0, 600, 600);
+//        header.setBorder(BorderFactory.createLineBorder(Color.black, 10));
+//        panel.setBounds(0, 0, 600, 600);
+//        panel.setBorder(BorderFactory.createLineBorder(Color.blue, 10));
+//        header.add(component);
+//        header.revalidate();
+//        header.repaint();
+//        panel.add(header);
+//        panel.revalidate();
+//        panel.repaint();
+//        add(panel);
+
         pack();
         setVisible(true);
         setLocationRelativeTo(null);
+
+        addLeftPanel();
+        addBottomPanel();
+        addMainPanel();
     }
 
     private void initNeuralNetwork() {
         //net = new NeuralNetwork(ActivationFunction.SIGMOID);
-        net = new NeuralNetwork(3, new int[] {196, 200, 10}, ActivationFunction.SIGMOID);
-        int layersCount = 3;
+        net = new NeuralNetwork(4, new int[] {196, 200, 200, 10}, ActivationFunction.SIGMOID);
+        int layersCount = net.getLayersCount();
         List<Integer> layerSizes = net.getLayerSizes();
         List<Layer> layers = new ArrayList<>(layersCount);
 
-        JPanel netPanel = new JPanel(null);
+        int segmentWidth = mainPanel.getWidth() / layersCount;
+
         for (int i = 0; i < layersCount; ++i) {
-            Layer layer = new Layer(i + 1, layerSizes.get(i));
-            layer.setBounds(600 + i * 300, 200, Layer.WIDTH + 1, Layer.HEIGHT + 1);
-            netPanel.add(layer);
+            Layer layer = new Layer("Layer " + (i + 1), layerSizes.get(i), (i == 0 ? Layer.MARK_FIRST : i == layersCount - 1 ? Layer.MARK_LAST : Layer.MARK_REGULAR));
+            layer.setBounds(segmentWidth * i + 100, 100, Layer.WIDTH + 1, Layer.HEIGHT + 1);
+            mainPanel.add(layer);
 
             MovingAdapter movingAdapter = new MovingAdapter(layer);
             layer.addMouseListener(movingAdapter);
@@ -208,11 +320,10 @@ public class MainWindow extends JFrame {
 
         for (int i = 0; i < layerSizes.size() - 1; ++i) {
             LayersConnection connection = new LayersConnection(layers.get(i), layers.get(i+1));
-            connection.setBounds(100, 100, 10000, 10000);
-            netPanel.add(connection);
+            connection.setBounds(0, 0, 10000, 10000);
+            mainPanel.add(connection);
         }
 
-        add(netPanel);
         revalidate();
         repaint();
     }
