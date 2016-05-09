@@ -27,7 +27,7 @@ public class NeuralNetworkTest {
     @Test
     public void testSaveLoad() throws Exception {
         InputStream inputStream = new FileInputStream(new File("res/data/mnist/train.csv"));
-        List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 1000);
+        List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 10000);
         DataCompressor.compressData(data, 28, 14);
 
         NeuralNetwork net = new NeuralNetwork(3, new int[] {196, 50, 10}, ActivationFunction.SIGMOID);
@@ -35,13 +35,13 @@ public class NeuralNetworkTest {
         List<Pair<Vector2D>> trainData = data;
         List<Pair<Vector2D>> testData = data;
 
-        net.launchSGD(trainData, testData, 20, 100, 1, Metrics.ACCURACY);
+        net.launchSGD(trainData, testData, 50, 100, 1, Metrics.ACCURACY);
 
         File netFile = new File("res/net/testNetwork.jnnet");
         net.saveToFile(new FileOutputStream(netFile));
 
         net = NeuralNetwork.readFromFile(new FileInputStream(netFile));
-        net.launchSGD(trainData, testData, 20, 100, 1, Metrics.ACCURACY);
+        System.out.println("Loaded network test accuracy: " + Metrics.ACCURACY.evaluateScore(net, testData));
     }
 
     @Test

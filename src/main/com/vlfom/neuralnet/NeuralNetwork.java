@@ -32,8 +32,9 @@ public class NeuralNetwork implements Serializable {
     }
 
     public NeuralNetwork(ActivationFunction activFunc) {
-        numLayers = 0;
+        numLayers = 1;
         layerSizes = new ArrayList<>();
+        layerSizes.add(0);
         biases = new ArrayList<>();
         weights = new ArrayList<>();
         this.activFunc = activFunc;

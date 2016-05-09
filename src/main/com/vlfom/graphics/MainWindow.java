@@ -6,6 +6,8 @@ package com.vlfom.graphics;
 import com.vlfom.data.DataCompressor;
 import com.vlfom.data.DataLoader;
 import com.vlfom.graphics.img.GridImage;
+import com.vlfom.graphics.net.Layer;
+import com.vlfom.graphics.net.LayersConnection;
 import com.vlfom.neuralnet.NeuralNetwork;
 import com.vlfom.neuralnet.activation.ActivationFunction;
 import com.vlfom.utils.Pair;
@@ -15,6 +17,8 @@ import java.awt.*;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -27,6 +31,7 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 
 public class MainWindow extends JFrame {
+    private NeuralNetwork net;
 
     private void clearScreen() {
         getContentPane().removeAll();
@@ -35,13 +40,16 @@ public class MainWindow extends JFrame {
 
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        Font font = new Font("Verdana", Font.PLAIN, 11);
+        menuBar.setPreferredSize(new Dimension(1600, 25));
+        Font font = new Font("Monospace", Font.PLAIN, 14);
 
         JMenu fileMenu = new JMenu("File");
         fileMenu.setFont(font);
+        fileMenu.setPreferredSize(new Dimension(40, 25));
 
         JMenu newMenu = new JMenu("New");
         newMenu.setFont(font);
+        newMenu.setPreferredSize(new Dimension(160, 25));
         fileMenu.add(newMenu);
 
         JMenuItem txtFileItem = new JMenuItem("Text file");
@@ -78,13 +86,16 @@ public class MainWindow extends JFrame {
 
         JMenu viewMenu = new JMenu("View");
         viewMenu.setFont(font);
+        viewMenu.setPreferredSize(new Dimension(50, 25));
 
         JMenuItem paintMenu = new JMenuItem("Paint");
         paintMenu.setFont(font);
+        paintMenu.setPreferredSize(new Dimension(160, 25));
         viewMenu.add(paintMenu);
         paintMenu.addActionListener(e -> {
             try {
-                paintImages(this);
+                clearScreen();
+                paintImages();
             } catch (Exception e1) {
                 e1.printStackTrace();
             }
@@ -92,6 +103,7 @@ public class MainWindow extends JFrame {
 
         JMenu constructorMenu = new JMenu("Constructor");
         constructorMenu.setFont(font);
+        constructorMenu.setPreferredSize(new Dimension(110, 25));
 
         JMenuItem newNetwork = new JMenuItem("New network...");
         newNetwork.setFont(font);
@@ -99,11 +111,12 @@ public class MainWindow extends JFrame {
 
         newNetwork.addActionListener(e -> {
             clearScreen();
-            clearScreen();
+            initNeuralNetwork();
         });
 
         JMenuItem addLayer = new JMenuItem("Add layer");
         addLayer.setFont(font);
+        addLayer.setPreferredSize(new Dimension(160, 25));
         constructorMenu.add(addLayer);
 
         menuBar.add(fileMenu);
@@ -112,7 +125,31 @@ public class MainWindow extends JFrame {
         return menuBar;
     }
 
-    private void paintImages(JFrame window) throws Exception {
+    private class MovingAdapter extends MouseAdapter {
+        private Point mouseCoords;
+        private Point coordinates;
+        private JComponent object;
+
+        public MovingAdapter(JComponent object) {
+            this.object = object;
+        }
+
+        @Override
+        public void mouseDragged (MouseEvent e) {
+            object.setLocation(coordinates.x + e.getXOnScreen() - mouseCoords.x, coordinates.y + e.getYOnScreen() - mouseCoords.y);
+            repaint();
+        }
+
+        @Override
+        public void mousePressed (MouseEvent e) {
+            coordinates = object.getLocation();
+            mouseCoords = e.getLocationOnScreen();
+        }
+    }
+
+    private void paintImages() throws Exception {
+        JPanel picturePanel = new JPanel(null);
+
         InputStream inputStream = new FileInputStream(new File("res/data/mnist/train.csv"));
         List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 32);
         DataCompressor.compressData(data, 28, 14);
@@ -127,16 +164,20 @@ public class MainWindow extends JFrame {
 
             GridImage picture = new GridImage(values);
             picture.setBounds(200 + 150 * x, 90 + 150 * y, 151, 151);
-            window.add(picture);
+            picturePanel.add(picture);
+            MovingAdapter movingAdapter = new MovingAdapter(picture);
+            picture.addMouseListener(movingAdapter);
+            picture.addMouseMotionListener(movingAdapter);
         }
 
-        window.add(new JComponent() {
-        });
-
+        add(picturePanel);
+        revalidate();
         repaint();
     }
 
-    public MainWindow() {
+    public MainWindow(String name) {
+        super(name);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(1600, 900));
         setJMenuBar(createMenuBar());
@@ -146,11 +187,37 @@ public class MainWindow extends JFrame {
     }
 
     private void initNeuralNetwork() {
-        NeuralNetwork net = new NeuralNetwork(ActivationFunction.SIGMOID);
+        //net = new NeuralNetwork(ActivationFunction.SIGMOID);
+        net = new NeuralNetwork(3, new int[] {196, 200, 10}, ActivationFunction.SIGMOID);
+        int layersCount = 3;
+        List<Integer> layerSizes = net.getLayerSizes();
+        List<Layer> layers = new ArrayList<>(layersCount);
 
+        JPanel netPanel = new JPanel(null);
+        for (int i = 0; i < layersCount; ++i) {
+            Layer layer = new Layer(i + 1, layerSizes.get(i));
+            layer.setBounds(600 + i * 300, 200, Layer.WIDTH + 1, Layer.HEIGHT + 1);
+            netPanel.add(layer);
+
+            MovingAdapter movingAdapter = new MovingAdapter(layer);
+            layer.addMouseListener(movingAdapter);
+            layer.addMouseMotionListener(movingAdapter);
+
+            layers.add(layer);
+        }
+
+        for (int i = 0; i < layerSizes.size() - 1; ++i) {
+            LayersConnection connection = new LayersConnection(layers.get(i), layers.get(i+1));
+            connection.setBounds(100, 100, 10000, 10000);
+            netPanel.add(connection);
+        }
+
+        add(netPanel);
+        revalidate();
+        repaint();
     }
 
     public static void main(String... args) throws Exception {
-        new MainWindow();
+        new MainWindow("JNNet GUI");
     }
 }
