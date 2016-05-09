@@ -1,11 +1,12 @@
 package com.vlfom.utils;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * Created by @vlfom.
  */
-public class Vector2D {
+public class Vector2D  implements Serializable {
     private int l1, l2;
     private double[][] val;
 

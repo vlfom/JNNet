@@ -4,19 +4,20 @@ import com.vlfom.neuralnet.NeuralNetwork;
 import com.vlfom.utils.Pair;
 import com.vlfom.utils.Vector2D;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * Created by @vlfom.
  */
-public abstract class Metrics {
+public abstract class Metrics  implements Serializable {
     public final static Metrics ACCURACY = new Metrics() {
         @Override
         public double evaluateScore (NeuralNetwork net, List<Pair<Vector2D>> testData) {
             Vector2D caseResult;
             int score = 0;
             for (Pair<Vector2D> testCase : testData) {
-                caseResult = net.feedforwardPropagation(testCase.getFirst());
+                caseResult = net.makePredictions(testCase.getFirst());
                 if (caseResult.getArgMax().equals(testCase.getSecond().getArgMax())) {
                     score += 1;
                 }
@@ -34,7 +35,7 @@ public abstract class Metrics {
             double precision = 0;
             double recall = 0;
             for (Pair<Vector2D> testCase : testData) {
-                caseResult = net.feedforwardPropagation(testCase.getFirst());
+                caseResult = net.makePredictions(testCase.getFirst());
                 if (testCase.getSecond().getArgMax().getFirst() == 1) {
                     positiveExamplesSize += 1;
                     if (caseResult.getArgMax().equals(testCase.getSecond().getArgMax()))
@@ -57,7 +58,7 @@ public abstract class Metrics {
             int len = testData.get(0).getSecond().getL1();
             double score = 0;
             for (Pair<Vector2D> testCase : testData) {
-                caseResult = net.feedforwardPropagation(testCase.getFirst());
+                caseResult = net.makePredictions(testCase.getFirst());
                 for (int i = 0; i < len; ++i)
                     score += Math.pow(caseResult.getVal(i) - testCase.getSecond().getVal(i), 2);
             }

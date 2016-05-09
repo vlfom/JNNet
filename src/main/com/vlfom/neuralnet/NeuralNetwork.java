@@ -1,46 +1,91 @@
 package com.vlfom.neuralnet;
 
+import com.sun.corba.se.impl.io.OutputStreamHook;
+import com.sun.corba.se.impl.orbutil.ObjectWriter;
+import com.vlfom.neuralnet.activation.ActivationFunction;
 import com.vlfom.neuralnet.metrics.Metrics;
 import com.vlfom.utils.Pair;
 import com.vlfom.utils.Vector2D;
 import com.vlfom.utils.VectorMath;
 
+import java.io.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
  * Created by @vlfom.
  */
-public class NeuralNetwork {
+public class NeuralNetwork implements Serializable {
     private int numLayers;
-    private int[] layerSizes;
-    public Vector2D[] biases;
-    public Vector2D[] weights;
+    private List<Integer> layerSizes;
+    private List<Vector2D> biases;
+    private List<Vector2D> weights;
+    private ActivationFunction activFunc;
 
-    public NeuralNetwork(int numLayers, int[] layerSizes) {
-        this.numLayers = numLayers;
-        this.layerSizes = layerSizes;
-
-        biases = new Vector2D[numLayers - 1];
-        weights = new Vector2D[numLayers - 1];
-
-        for (int i = 0; i < numLayers - 1; ++i) {
-            biases[i] = VectorMath.gaussianRandom(layerSizes[i + 1], 1);
+    private static ArrayList<Integer> toArrayList(int[] array) {
+        ArrayList<Integer> arrayList = new ArrayList<>(array.length);
+        for (int value : array) {
+            arrayList.add(value);
         }
+        return arrayList;
+    }
+
+    public NeuralNetwork(ActivationFunction activFunc) {
+        numLayers = 0;
+        layerSizes = new ArrayList<>();
+        biases = new ArrayList<>();
+        weights = new ArrayList<>();
+        this.activFunc = activFunc;
+    }
+
+    public NeuralNetwork(int numLayers, int[] layerSizes, ActivationFunction activFunc) {
+        this.numLayers = numLayers;
+        this.layerSizes = toArrayList(layerSizes);
+        this.activFunc = activFunc;
+
+        biases = new ArrayList<>(numLayers - 1);
+        weights = new ArrayList<>(numLayers - 1);
 
         for (int i = 0; i < numLayers - 1; ++i) {
-            weights[i] = VectorMath.gaussianRandom(layerSizes[i], layerSizes[i + 1]);
+            biases.add(VectorMath.gaussianRandom(layerSizes[i + 1], 1));
+            weights.add(VectorMath.gaussianRandom(layerSizes[i], layerSizes[i + 1]));
         }
     }
 
-    public Vector2D feedforwardPropagation(Vector2D x) {
+    public void addLayer(int layerSize) {
+        numLayers += 1;
+        layerSizes.add(layerSize);
+        biases.add(VectorMath.gaussianRandom(layerSize, 1));
+        weights.add(VectorMath.gaussianRandom(layerSizes.get(numLayers - 2), layerSize));
+    }
+
+    public void removeLastLayer() {
+        if (numLayers == 1) {
+            return;
+        }
+        numLayers -= 1;
+        layerSizes.remove(numLayers);
+        biases.remove(numLayers - 1);
+        weights.remove(numLayers - 1);
+    }
+
+    public List<Integer> getLayerSizes() {
+        return layerSizes;
+    }
+
+    private Vector2D feedforwardPropagation(Vector2D x) {
         for (int i = 0; i < numLayers - 1; ++i) {
-            x = ActivationFunction.sigmoid(weights[i].transpose().dot(x).add(biases[i]));
+            x = activFunc.apply(weights.get(i).transpose().dot(x).add(biases.get(i)));
         }
         return x;
     }
 
-    public Pair<Vector2D[]> backPropagation(Vector2D x, Vector2D y) {
+    public Vector2D makePredictions(Vector2D x) {
+        return feedforwardPropagation(x);
+    }
+
+    private Pair<Vector2D[]> backPropagation(Vector2D x, Vector2D y) {
         Vector2D[] nablaB = new Vector2D[numLayers - 1];
         Vector2D[] nablaW = new Vector2D[numLayers - 1];
         Vector2D activation = x;
@@ -49,63 +94,71 @@ public class NeuralNetwork {
         Vector2D[] zs = new Vector2D[numLayers - 1];
         activations[0] = x;
         for (int i = 0; i < numLayers - 1; ++i) {
-            z = weights[i].transpose().dot(activation).add(biases[i]);
+            z = weights.get(i).transpose().dot(activation).add(biases.get(i));
             zs[i] = z;
-            activation = ActivationFunction.sigmoid(z);
-            activations[i+1] = activation;
+            activation = activFunc.apply(z);
+            activations[i + 1] = activation;
         }
-        Vector2D delta = calculateCostDerivative(activations[numLayers-1], y).mul(
-                ActivationFunction.sigmoidDerivaive(zs[numLayers-2])
-        );
-        nablaB[numLayers-2] = delta;
-        nablaW[numLayers-2] = delta.dot(activations[numLayers-2].transpose()).transpose();
-        for (int i = numLayers-3; i >= 0; --i) {
+        Vector2D delta = calculateCostDerivative(activations[numLayers - 1], y).mul(activFunc.calculateDerivative(zs[numLayers - 2]));
+        nablaB[numLayers - 2] = delta;
+        nablaW[numLayers - 2] = delta.dot(activations[numLayers - 2].transpose()).transpose();
+        for (int i = numLayers - 3; i >= 0; --i) {
             z = zs[i];
-            Vector2D sp = ActivationFunction.sigmoidDerivaive(z);
-            delta = weights[i+1].dot(delta).mul(sp);
+            Vector2D sp = activFunc.calculateDerivative(z);
+            delta = weights.get(i + 1).dot(delta).mul(sp);
             nablaB[i] = delta;
             nablaW[i] = delta.dot(activations[i].transpose()).transpose();
         }
         return new Pair<>(nablaB, nablaW);
     }
 
-    public void updateMiniBatch(List<Pair<Vector2D>> miniBatch, double learningRate) {
+    private void updateMiniBatch(List<Pair<Vector2D>> miniBatch, double learningRate) {
         Vector2D[] nablaB = new Vector2D[numLayers - 1];
         Vector2D[] nablaW = new Vector2D[numLayers - 1];
         for (int i = 0; i < numLayers - 1; ++i) {
-            nablaB[i] = new Vector2D(layerSizes[i+1]);
-            nablaW[i] = new Vector2D(layerSizes[i], layerSizes[i+1]);
+            nablaB[i] = new Vector2D(layerSizes.get(i + 1));
+            nablaW[i] = new Vector2D(layerSizes.get(i), layerSizes.get(i + 1));
         }
         Pair<Vector2D[]> deltaNablas;
         int batchSize = miniBatch.size();
-        for (int i = 0; i < batchSize; ++i) {
-            deltaNablas = backPropagation(miniBatch.get(i).getFirst(), miniBatch.get(i).getSecond());
-            for (int j = 0; j < numLayers-1; ++j) {
+        for (Pair<Vector2D> aMiniBatch : miniBatch) {
+            deltaNablas = backPropagation(aMiniBatch.getFirst(), aMiniBatch.getSecond());
+            for (int j = 0; j < numLayers - 1; ++j) {
                 nablaB[j] = nablaB[j].add(deltaNablas.getFirst()[j]);
                 nablaW[j] = nablaW[j].add(deltaNablas.getSecond()[j]);
             }
         }
         for (int i = 0; i < numLayers - 1; ++i) {
-            biases[i] = biases[i].sub(nablaB[i].mul(learningRate/batchSize));
-        }
-        for (int i = 0; i < numLayers - 1; ++i) {
-            weights[i] = weights[i].sub(nablaW[i].mul(learningRate/batchSize));
+            biases.set(i, biases.get(i).sub(nablaB[i].mul(learningRate / batchSize)));
+            weights.set(i, weights.get(i).sub(nablaW[i].mul(learningRate / batchSize)));
         }
     }
 
-    public void launchSGD(List<Pair<Vector2D>> trainData, List<Pair<Vector2D>> testData, int epochsCount, int batchSize,
-                          double learningRate, Metrics metrics) {
+    private static Vector2D calculateCostDerivative(Vector2D outActivations, Vector2D y) {
+        return outActivations.sub(y);
+    }
+
+    public void launchSGD(List<Pair<Vector2D>> trainData, List<Pair<Vector2D>> testData, int epochsCount, int batchSize, double learningRate, Metrics metrics) {
         for (int e = 0; e < epochsCount; ++e) {
             Collections.shuffle(trainData);
             for (int i = batchSize; i <= trainData.size(); i += batchSize) {
-                updateMiniBatch(trainData.subList(i-batchSize, i), learningRate);
+                updateMiniBatch(trainData.subList(i - batchSize, i), learningRate);
             }
             System.out.printf("Epoch: %d. Score: %.3f\n", e, metrics.evaluateScore(this, testData));
         }
     }
 
-    public static Vector2D calculateCostDerivative(Vector2D outActivations, Vector2D y) {
-        return outActivations.sub(y);
+    public void saveToFile(OutputStream outputStream) throws IOException {
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+        objectOutputStream.writeObject(this);
+        objectOutputStream.close();
+    }
+
+    public static NeuralNetwork readFromFile(InputStream inputStream) throws IOException, ClassNotFoundException {
+        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+        NeuralNetwork network = (NeuralNetwork) objectInputStream.readObject();
+        objectInputStream.close();
+        return network;
     }
 
 }
