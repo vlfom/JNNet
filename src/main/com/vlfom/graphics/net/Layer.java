@@ -1,7 +1,11 @@
 package com.vlfom.graphics.net;
 
+import com.vlfom.graphics.window.MainWindow;
+
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * Created by @vlfom.
@@ -18,10 +22,50 @@ public class Layer extends JComponent {
     private int layerID;
     private byte mark;
 
-    public Layer(String title, int layerSize, byte mark) {
+    private JPopupMenu popupMenu;
+
+    private class MovingAdapter extends MouseAdapter {
+        private MainWindow window;
+
+        public MovingAdapter(MainWindow window) {
+            this.window = window;
+        }
+
+        @Override
+        public void mousePressed (MouseEvent e) {
+            System.out.println(window.net.getLayersCount());
+            window.net.removeLayer(layerID);
+            window.clearScreen();
+            window.repaintNetwork();
+        }
+    }
+
+    public Layer(String title, int layerID, int layerSize, byte mark, MainWindow mainWindow) {
         this.title = title;
+        this.layerID = layerID;
         this.layerSize = layerSize;
         this.mark = mark;
+
+        setLayout(null);
+        addMouseListener(new MyAdapter());
+
+        popupMenu = new JPopupMenu();
+        JMenuItem txtFileItem = new JMenuItem("Remove layer");
+        Font font = new Font("Monospace", Font.PLAIN, 14);
+        txtFileItem.setFont(font);
+        txtFileItem.setPreferredSize(new Dimension(140, 25));
+        txtFileItem.addMouseListener(new MovingAdapter(mainWindow));
+        txtFileItem.addMouseMotionListener(new MovingAdapter(mainWindow));
+        popupMenu.add(txtFileItem);
+    }
+
+    private class MyAdapter extends MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            if (SwingUtilities.isRightMouseButton(e)) {
+                popupMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+        }
     }
 
     public void paint(Graphics g) {
@@ -51,5 +95,7 @@ public class Layer extends JComponent {
         g2D.setFont(new Font("Verdana", Font.PLAIN, 24));
         g2D.drawString("Size: " + layerSize, (80 - 300) / 2 - width / 2, 75);
 
+        revalidate();
+        repaint();
     }
 }

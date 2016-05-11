@@ -65,6 +65,22 @@ public class NeuralNetwork implements Serializable {
         weights.add(VectorMath.gaussianRandom(layerSizes.get(numLayers - 2), layerSize));
     }
 
+    public void removeLayer(int ind) {
+        if (numLayers == 1 || ind < 0 || ind >= numLayers) {
+            return;
+        }
+        layerSizes.remove(ind);
+        numLayers -= 1;
+
+        biases = new ArrayList<>(numLayers - 1);
+        weights = new ArrayList<>(numLayers - 1);
+
+        for (int i = 0; i < numLayers - 1; ++i) {
+            biases.add(VectorMath.gaussianRandom(layerSizes.get(i + 1), 1));
+            weights.add(VectorMath.gaussianRandom(layerSizes.get(i), layerSizes.get(i + 1)));
+        }
+    }
+
     public void removeLastLayer() {
         if (numLayers == 1) {
             return;

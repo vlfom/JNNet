@@ -1,11 +1,13 @@
-package com.vlfom.graphics;
+package com.vlfom.graphics.window;
 
 /**
  * Created by @vlfom.
  */
 import com.vlfom.data.DataCompressor;
 import com.vlfom.data.DataLoader;
+import com.vlfom.graphics.StyledLabel;
 import com.vlfom.graphics.img.GridImage;
+import com.vlfom.graphics.list.StyledList;
 import com.vlfom.graphics.net.Layer;
 import com.vlfom.graphics.net.LayersConnection;
 import com.vlfom.neuralnet.NeuralNetwork;
@@ -15,29 +17,24 @@ import com.vlfom.utils.Vector2D;
 
 import java.awt.*;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
-import java.util.regex.Pattern;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 
 public class MainWindow extends JFrame {
-    private NeuralNetwork net;
+    public NeuralNetwork net;
     private JPanel leftPanel;
+    private JPanel rightPanel;
     private JPanel mainPanel;
     private JPanel bottomPanel;
 
-    private void clearScreen() {
+    public void clearScreen() {
         mainPanel.removeAll();
         mainPanel.revalidate();
         mainPanel.repaint();
@@ -47,6 +44,7 @@ public class MainWindow extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         menuBar.setPreferredSize(new Dimension(1600, 25));
         menuBar.setBackground(new Color(232, 232, 232));
+        menuBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(160, 160, 160)));
 
         Font font = new Font("Monospace", Font.PLAIN, 14);
 
@@ -110,7 +108,7 @@ public class MainWindow extends JFrame {
 
         JMenu constructorMenu = new JMenu("Constructor");
         constructorMenu.setFont(font);
-        constructorMenu.setPreferredSize(new Dimension(110, 25));
+        constructorMenu.setPreferredSize(new Dimension(100, 25));
 
         JMenuItem newNetwork = new JMenuItem("New network...");
         newNetwork.setFont(font);
@@ -119,6 +117,7 @@ public class MainWindow extends JFrame {
         newNetwork.addActionListener(e -> {
             clearScreen();
             initNeuralNetwork();
+            repaintNetwork();
         });
 
         JMenuItem addLayer = new JMenuItem("Add layer");
@@ -126,9 +125,37 @@ public class MainWindow extends JFrame {
         addLayer.setPreferredSize(new Dimension(160, 25));
         constructorMenu.add(addLayer);
 
+        addLayer.addActionListener(e -> {
+            clearScreen();
+            net.addLayer(10);
+            repaintNetwork();
+            revalidate();
+            repaint();
+        });
+
+        JMenu dataMenu = new JMenu("Data");
+        dataMenu.setFont(font);
+        dataMenu.setPreferredSize(new Dimension(50, 25));
+
+        JMenuItem loadData = new JMenuItem("Load data...");
+        loadData.setFont(font);
+        loadData.setPreferredSize(new Dimension(160, 25));
+        dataMenu.add(loadData);
+
+        JMenu netMenu = new JMenu("Network");
+        netMenu.setFont(font);
+        netMenu.setPreferredSize(new Dimension(80, 25));
+
+        JMenuItem launchSGD = new JMenuItem("Launch SGD...");
+        launchSGD.setFont(font);
+        launchSGD.setPreferredSize(new Dimension(160, 25));
+        netMenu.add(launchSGD);
+
         menuBar.add(fileMenu);
         menuBar.add(viewMenu);
         menuBar.add(constructorMenu);
+        menuBar.add(dataMenu);
+        menuBar.add(netMenu);
         return menuBar;
     }
 
@@ -143,20 +170,22 @@ public class MainWindow extends JFrame {
 
         @Override
         public void mouseDragged (MouseEvent e) {
-            object.setLocation(coordinates.x + e.getXOnScreen() - mouseCoords.x, coordinates.y + e.getYOnScreen() - mouseCoords.y);
-            repaint();
+            if (SwingUtilities.isLeftMouseButton(e)) {
+                object.setLocation(coordinates.x + e.getXOnScreen() - mouseCoords.x, coordinates.y + e.getYOnScreen() - mouseCoords.y);
+                repaint();
+            }
         }
 
         @Override
         public void mousePressed (MouseEvent e) {
-            coordinates = object.getLocation();
-            mouseCoords = e.getLocationOnScreen();
+            if (SwingUtilities.isLeftMouseButton(e)) {
+                coordinates = object.getLocation();
+                mouseCoords = e.getLocationOnScreen();
+            }
         }
     }
 
     private void paintImages() throws Exception {
-        JPanel picturePanel = new JPanel(null);
-
         InputStream inputStream = new FileInputStream(new File("res/data/mnist/train.csv"));
         List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 32);
         DataCompressor.compressData(data, 28, 14);
@@ -169,20 +198,20 @@ public class MainWindow extends JFrame {
             int x = pictureID % 8;
             int y = pictureID / 8;
 
-            GridImage picture = new GridImage(values);
-            picture.setBounds(200 + 150 * x, 90 + 150 * y, 151, 151);
-            picturePanel.add(picture);
+            GridImage picture = new GridImage(values, 5);
+            int scale = 100;
+            picture.setBounds(200 + scale * x, 90 + scale * y, scale, scale);
+            mainPanel.add(picture);
             MovingAdapter movingAdapter = new MovingAdapter(picture);
             picture.addMouseListener(movingAdapter);
             picture.addMouseMotionListener(movingAdapter);
         }
 
-        picturePanel.setOpaque(true);
-        picturePanel.setBackground(new Color(0,0,0,0));
-        add(picturePanel);
         revalidate();
         repaint();
     }
+
+    StyledList layersList;
 
     private void addLeftPanel() {
         leftPanel = new JPanel(null);
@@ -191,23 +220,27 @@ public class MainWindow extends JFrame {
         leftPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 1, new Color(160, 160, 160)));
         leftPanel.setBackground(new Color(255, 255, 255));
 
-        JPanel header = new JPanel(null);
-        header.setBounds(0, 0, 250, 20);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(160, 160, 160)));
-        header.setBackground(new Color(232, 232, 232));
+        leftPanel.add(new StyledLabel(
+                "Object browser", 250, new Color(232, 232, 232), new Color(160, 160, 160), 0, 0, 1, 1
+        ));
 
-        JLabel headerTitle = new JLabel("Object browser");
-        headerTitle.setBackground(new Color(0, 0, 0, 0));
-        headerTitle.setFont(new Font("Monospace", Font.PLAIN, 13));
-        headerTitle.setOpaque(true);
-        headerTitle.setBounds(9, 0, 244, 18);
-        headerTitle.setSize(new Dimension(249, 19));
-
-        header.add(headerTitle);
-
-        leftPanel.add(header);
+        layersList = new StyledList(0, 20, 249, this);
+        add(layersList);
 
         add(leftPanel);
+
+        revalidate();
+        repaint();
+    }
+
+    private void addRightPanel() {
+        rightPanel = new JPanel(null);
+
+        rightPanel.setBounds(1580, 0, 20, 600);
+        rightPanel.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(160, 160, 160)));
+        rightPanel.setBackground(new Color(232, 232, 232));
+
+        add(rightPanel);
 
         revalidate();
         repaint();
@@ -220,25 +253,15 @@ public class MainWindow extends JFrame {
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(160, 160, 160)));
         bottomPanel.setBackground(new Color(255, 255, 255));
 
-        JPanel header = new JPanel(null);
-        header.setBounds(0, 0, 1600, 20);
-        header.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(160, 160, 160)));
-        header.setBackground(new Color(232, 232, 232));
-        bottomPanel.add(header);
+        bottomPanel.add(new StyledLabel(
+                "Logs", 1600, new Color(232, 232, 232), new Color(160, 160, 160), 1, 0, 1, 0
+        ));
 
         JPanel leftSubPanel = new JPanel(null);
         leftSubPanel.setBounds(0, 20, 20, 300);
         leftSubPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(160, 160, 160)));
         leftSubPanel.setBackground(new Color(232, 232, 232));
         bottomPanel.add(leftSubPanel);
-
-        JLabel headerTitle = new JLabel("Logs");
-        headerTitle.setBackground(new Color(0, 0, 0, 0));
-        headerTitle.setFont(new Font("Monospace", Font.PLAIN, 13));
-        headerTitle.setOpaque(true);
-        headerTitle.setBounds(9, 0, 244, 18);
-        headerTitle.setSize(new Dimension(249, 19));
-        header.add(headerTitle);
 
         add(bottomPanel);
 
@@ -249,7 +272,7 @@ public class MainWindow extends JFrame {
     public void addMainPanel() {
         mainPanel = new JPanel(null);
 
-        mainPanel.setBounds(250, 0, 1350, 600);
+        mainPanel.setBounds(250, 0, 1330, 600);
         mainPanel.setBackground(new Color(255, 255, 255));
 
         add(mainPanel);
@@ -266,49 +289,32 @@ public class MainWindow extends JFrame {
         setJMenuBar(createMenuBar());
         setLayout(null);
 
-//        JPanel panel = new JPanel(null);
-//        JPanel header = new JPanel(null);
-//        Component component = new Component() {
-//            @Override
-//            public void paint(Graphics g) {
-//                g.setColor(Color.BLACK);
-//                g.fillRect(100, 100, 500, 500);
-//            }
-//        };
-//        component.setBounds(0, 0, 600, 600);
-//        header.setBounds(100, 0, 600, 600);
-//        header.setBorder(BorderFactory.createLineBorder(Color.black, 10));
-//        panel.setBounds(0, 0, 600, 600);
-//        panel.setBorder(BorderFactory.createLineBorder(Color.blue, 10));
-//        header.add(component);
-//        header.revalidate();
-//        header.repaint();
-//        panel.add(header);
-//        panel.revalidate();
-//        panel.repaint();
-//        add(panel);
-
         pack();
         setVisible(true);
+        setResizable(false);
         setLocationRelativeTo(null);
 
         addLeftPanel();
+        addRightPanel();
         addBottomPanel();
         addMainPanel();
     }
 
-    private void initNeuralNetwork() {
-        //net = new NeuralNetwork(ActivationFunction.SIGMOID);
-        net = new NeuralNetwork(4, new int[] {196, 200, 200, 10}, ActivationFunction.SIGMOID);
+    public void repaintNetwork() {
         int layersCount = net.getLayersCount();
         List<Integer> layerSizes = net.getLayerSizes();
         List<Layer> layers = new ArrayList<>(layersCount);
 
-        int segmentWidth = mainPanel.getWidth() / layersCount;
+        double segmentWidth = mainPanel.getWidth() * 1.0 / layersCount;
 
         for (int i = 0; i < layersCount; ++i) {
-            Layer layer = new Layer("Layer " + (i + 1), layerSizes.get(i), (i == 0 ? Layer.MARK_FIRST : i == layersCount - 1 ? Layer.MARK_LAST : Layer.MARK_REGULAR));
-            layer.setBounds(segmentWidth * i + 100, 100, Layer.WIDTH + 1, Layer.HEIGHT + 1);
+            Layer layer = new Layer(
+                    "Layer " + (i + 1),
+                    i,
+                    layerSizes.get(i),
+                    (i == 0 ? Layer.MARK_FIRST :i == layersCount - 1 ? Layer.MARK_LAST : Layer.MARK_REGULAR),
+                    this);
+            layer.setBounds((int) (segmentWidth * i + (segmentWidth - Layer.WIDTH) / 2.0), 100, Layer.WIDTH + 1, Layer.HEIGHT + 1);
             mainPanel.add(layer);
 
             MovingAdapter movingAdapter = new MovingAdapter(layer);
@@ -326,6 +332,13 @@ public class MainWindow extends JFrame {
 
         revalidate();
         repaint();
+    }
+
+    private void initNeuralNetwork() {
+        net = new NeuralNetwork(3, new int[] {196, 300, 10}, ActivationFunction.SIGMOID);
+        List<Integer> layerSizes = net.getLayerSizes();
+        for (int i = 0; i < layerSizes.size(); ++i)
+            layersList.add("Layer " + (i+1) + ", " + layerSizes.get(i) + " neurons");
     }
 
     public static void main(String... args) throws Exception {
