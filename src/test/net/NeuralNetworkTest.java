@@ -35,7 +35,7 @@ public class NeuralNetworkTest {
         List<Pair<Vector2D>> trainData = data;
         List<Pair<Vector2D>> testData = data;
 
-        net.launchSGD(trainData, testData, 50, 100, 1, Metrics.ACCURACY);
+        net.launchSGD(trainData, testData, 50, 100, 1, Metrics.ACCURACY, System.out);
 
         File netFile = new File("res/net/testNetwork.jnnet");
         net.saveToFile(new FileOutputStream(netFile));
@@ -55,7 +55,7 @@ public class NeuralNetworkTest {
         List<Pair<Vector2D>> trainData = data;
         List<Pair<Vector2D>> testData = data;
 
-        net.launchSGD(trainData, testData, 100, 100, 1, Metrics.ACCURACY);
+        net.launchSGD(trainData, testData, 100, 100, 1, Metrics.ACCURACY, System.out);
     }
 
 }

@@ -81,16 +81,6 @@ public class NeuralNetwork implements Serializable {
         }
     }
 
-    public void removeLastLayer() {
-        if (numLayers == 1) {
-            return;
-        }
-        numLayers -= 1;
-        layerSizes.remove(numLayers);
-        biases.remove(numLayers - 1);
-        weights.remove(numLayers - 1);
-    }
-
     public List<Integer> getLayerSizes() {
         return layerSizes;
     }
@@ -159,13 +149,13 @@ public class NeuralNetwork implements Serializable {
         return outActivations.sub(y);
     }
 
-    public void launchSGD(List<Pair<Vector2D>> trainData, List<Pair<Vector2D>> testData, int epochsCount, int batchSize, double learningRate, Metrics metrics) {
+    public void launchSGD(List<Pair<Vector2D>> trainData, List<Pair<Vector2D>> testData, int epochsCount, int batchSize, double learningRate, Metrics metrics, PrintStream printStream) {
         for (int e = 0; e < epochsCount; ++e) {
             Collections.shuffle(trainData);
             for (int i = batchSize; i <= trainData.size(); i += batchSize) {
                 updateMiniBatch(trainData.subList(i - batchSize, i), learningRate);
             }
-            System.out.printf("Epoch: %d. Score: %.3f\n", e, metrics.evaluateScore(this, testData));
+            printStream.printf("Finished epoch:  %d.      " + metrics.getName() + " :  %.3f.\n", e, metrics.evaluateScore(this, testData));
         }
     }
 

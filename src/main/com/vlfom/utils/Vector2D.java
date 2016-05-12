@@ -1,6 +1,6 @@
 package com.vlfom.utils;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
 
 /**
@@ -248,4 +248,18 @@ public class Vector2D  implements Serializable {
         s.append(']');
         return s.toString();
     }
+
+    public void saveToFile(OutputStream outputStream) throws IOException {
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+        objectOutputStream.writeObject(this);
+        objectOutputStream.close();
+    }
+
+    public static Vector2D readFromFile(InputStream inputStream) throws IOException, ClassNotFoundException {
+        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+        Vector2D vector2D = (Vector2D) objectInputStream.readObject();
+        objectInputStream.close();
+        return vector2D;
+    }
+
 }

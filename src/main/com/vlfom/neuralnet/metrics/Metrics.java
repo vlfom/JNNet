@@ -24,6 +24,11 @@ public abstract class Metrics  implements Serializable {
             }
             return score * 1.0 / testData.size();
         }
+
+        @Override
+        public String getName() {
+            return "Accuracy";
+        }
     };
 
     public final static Metrics F1_SCORE = new Metrics() {
@@ -49,6 +54,11 @@ public abstract class Metrics  implements Serializable {
             recall /= positiveExamplesSize;
             return 2 * precision * recall / (precision + recall);
         }
+
+        @Override
+        public String getName() {
+            return "F1 Score";
+        }
     };
 
     public final static Metrics MSE = new Metrics() {
@@ -64,7 +74,13 @@ public abstract class Metrics  implements Serializable {
             }
             return score * 1.0 / (len * testData.size());
         }
+
+        @Override
+        public String getName() {
+            return "Mean Squared Error";
+        }
     };
 
     public abstract double evaluateScore(NeuralNetwork net, List<Pair<Vector2D>> testData);
+    public abstract String getName();
 }

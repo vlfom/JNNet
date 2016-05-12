@@ -1,4 +1,4 @@
-package com.vlfom.graphics;
+package com.vlfom.graphics.label;
 
 import javax.swing.*;
 import java.awt.*;

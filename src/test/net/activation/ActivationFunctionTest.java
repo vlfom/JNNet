@@ -22,7 +22,7 @@ public class ActivationFunctionTest {
         ArrayList<Pair<Vector2D>> trainData = DataGenerator.generateData(1000, 0);
         ArrayList<Pair<Vector2D>> testData = DataGenerator.generateData(500, 0);
 
-        net.launchSGD(trainData, testData, 50, 1, 0.01, Metrics.ACCURACY);
+        net.launchSGD(trainData, testData, 50, 1, 0.01, Metrics.ACCURACY, System.out);
     }
 
     @Test
@@ -32,6 +32,6 @@ public class ActivationFunctionTest {
         ArrayList<Pair<Vector2D>> trainData = DataGenerator.generateData(1000, 0);
         ArrayList<Pair<Vector2D>> testData = DataGenerator.generateData(500, 0);
 
-        net.launchSGD(trainData, testData, 50, 100, 0.01, Metrics.ACCURACY);
+        net.launchSGD(trainData, testData, 50, 100, 0.01, Metrics.ACCURACY, System.out);
     }
 }

@@ -1,6 +1,6 @@
 package com.vlfom.graphics.list;
 
-import com.vlfom.graphics.StyledLabel;
+import com.vlfom.graphics.label.StyledLabel;
 import com.vlfom.graphics.window.MainWindow;
 
 import javax.swing.*;
@@ -14,7 +14,7 @@ import java.util.List;
  * Created by @vlfom.
  */
 public class StyledList extends JPanel {
-    private List<StyledLabel> items;
+    public List<StyledLabel> items;
     private int width;
     private int x, y;
     private int selectedItem;
@@ -50,7 +50,7 @@ public class StyledList extends JPanel {
         redraw();
     }
 
-    private void redraw() {
+    public void redraw() {
         removeAll();
         for (int i = 0; i < items.size(); ++i) {
             items.get(i).setBounds(0, 20 * i, width, 20);
@@ -65,6 +65,12 @@ public class StyledList extends JPanel {
             items.get(selectedItem).setBackground(Color.white);
             selectedItem = -1;
         }
+    }
+
+    public void clear() {
+        removeAll();
+        items.clear();
+        selectedItem = -1;
     }
 
     private class ListItemMouseListener extends MouseAdapter {
@@ -98,9 +104,8 @@ public class StyledList extends JPanel {
 
         @Override
         public void mousePressed (MouseEvent e) {
-            window.net.removeLayer(selectedItem);
-            window.clearScreen();
-            window.repaintNetwork();
+            window.removeNetworkLayer(selectedItem);
+            selectedItem = -1;
         }
     }
 }

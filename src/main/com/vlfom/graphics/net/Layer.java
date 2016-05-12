@@ -24,22 +24,6 @@ public class Layer extends JComponent {
 
     private JPopupMenu popupMenu;
 
-    private class MovingAdapter extends MouseAdapter {
-        private MainWindow window;
-
-        public MovingAdapter(MainWindow window) {
-            this.window = window;
-        }
-
-        @Override
-        public void mousePressed (MouseEvent e) {
-            System.out.println(window.net.getLayersCount());
-            window.net.removeLayer(layerID);
-            window.clearScreen();
-            window.repaintNetwork();
-        }
-    }
-
     public Layer(String title, int layerID, int layerSize, byte mark, MainWindow mainWindow) {
         this.title = title;
         this.layerID = layerID;
@@ -57,15 +41,6 @@ public class Layer extends JComponent {
         txtFileItem.addMouseListener(new MovingAdapter(mainWindow));
         txtFileItem.addMouseMotionListener(new MovingAdapter(mainWindow));
         popupMenu.add(txtFileItem);
-    }
-
-    private class MyAdapter extends MouseAdapter {
-        @Override
-        public void mousePressed(MouseEvent e) {
-            if (SwingUtilities.isRightMouseButton(e)) {
-                popupMenu.show(e.getComponent(), e.getX(), e.getY());
-            }
-        }
     }
 
     public void paint(Graphics g) {
@@ -97,5 +72,27 @@ public class Layer extends JComponent {
 
         revalidate();
         repaint();
+    }
+
+    private class MyAdapter extends MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            if (SwingUtilities.isRightMouseButton(e)) {
+                popupMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+        }
+    }
+
+    private class MovingAdapter extends MouseAdapter {
+        private MainWindow window;
+
+        public MovingAdapter(MainWindow window) {
+            this.window = window;
+        }
+
+        @Override
+        public void mousePressed (MouseEvent e) {
+            window.removeNetworkLayer(layerID);
+        }
     }
 }
