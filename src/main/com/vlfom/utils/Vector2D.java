@@ -1,12 +1,15 @@
 package com.vlfom.utils;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.Arrays;
 
 /**
  * Created by @vlfom.
  */
-public class Vector2D  implements Serializable {
+public class Vector2D implements Serializable {
     private int l1, l2;
     private double[][] val;
 
@@ -260,6 +263,34 @@ public class Vector2D  implements Serializable {
         Vector2D vector2D = (Vector2D) objectInputStream.readObject();
         objectInputStream.close();
         return vector2D;
+    }
+
+    public void saveAsImageToFile(File file, int width, int height) throws IOException {
+        BufferedImage image = new BufferedImage(14, 14, BufferedImage.TYPE_INT_RGB);
+
+        int brightness;
+        for (int i = 0; i < height; ++i) {
+            for (int j = 0; j < width; ++j) {
+                brightness = 255 - (int) val[i * width + j][0];
+                image.setRGB(j, i, new Color(brightness, brightness, brightness).getRGB());
+            }
+        }
+
+        ImageIO.write(image, "jpg", file);
+    }
+
+    public static Vector2D readFromImage(File file) throws IOException {
+        BufferedImage image;
+        image = ImageIO.read(file);
+        int width = image.getWidth();
+        int height = image.getHeight();
+        Vector2D pic = new Vector2D(width * height);
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                pic.setVal(i * height + j, 255 - new Color(image.getRGB(j, i)).getRed());
+            }
+        }
+        return pic;
     }
 
 }

@@ -14,10 +14,14 @@ import java.util.regex.Pattern;
  */
 public class DataLoader {
     public static List<Pair<Vector2D>> loadData(InputStream inputStream, int numFeatures, int numLabels, int numExamples) {
-        if (numExamples == -1)
+        if (numExamples == -1) {
             numExamples = Integer.MAX_VALUE;
+        }
 
         Scanner sc = new Scanner(inputStream);
+        sc.useDelimiter(Pattern.compile("\n"));
+        for (int it = 0; it < 6; ++it)
+            sc.next();
         sc.useDelimiter(Pattern.compile(",|\n"));
         ArrayList<Pair<Vector2D>> data = new ArrayList<>();
         int label;
@@ -27,8 +31,9 @@ public class DataLoader {
         while (sc.hasNextInt() && examplesCount < numExamples) {
             label = sc.nextInt();
             labels[label] = 1;
-            for (int j = 0; j < numFeatures; ++j)
+            for (int j = 0; j < numFeatures; ++j) {
                 values[j] = sc.nextInt();
+            }
             data.add(new Pair<>(new Vector2D(values), new Vector2D(labels)));
             labels[label] = 0;
             examplesCount += 1;

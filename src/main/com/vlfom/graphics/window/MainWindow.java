@@ -6,13 +6,16 @@ package com.vlfom.graphics.window;
 
 import com.vlfom.data.DataCompressor;
 import com.vlfom.data.DataLoader;
+import com.vlfom.graphics.button.ClearButton;
 import com.vlfom.graphics.label.StyledLabel;
 import com.vlfom.graphics.button.ResumeButton;
 import com.vlfom.graphics.button.StopButton;
-import com.vlfom.graphics.img.InputPicture;
+import com.vlfom.graphics.img.VectorPicture;
 import com.vlfom.graphics.list.StyledList;
+import com.vlfom.graphics.mouse.RequestFocusListener;
 import com.vlfom.graphics.net.Layer;
 import com.vlfom.graphics.net.LayersConnection;
+import com.vlfom.graphics.textarea.TextAreaOutputStream;
 import com.vlfom.neuralnet.NeuralNetwork;
 import com.vlfom.neuralnet.activation.ActivationFunction;
 import com.vlfom.neuralnet.metrics.Metrics;
@@ -21,14 +24,16 @@ import com.vlfom.utils.Vector2D;
 
 import java.awt.*;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 
@@ -51,7 +56,8 @@ public class MainWindow extends JFrame {
     private JMenuItem closeItem;
     private JMenuItem exitItem;
     private JMenu viewMenu;
-    private JMenuItem paintItem;
+    private JMenuItem showNetwork;
+    private JMenuItem showDataset;
     private JMenu constructorMenu;
     private JMenuItem newNetworkItem;
     private JMenuItem addLayerItem;
@@ -63,6 +69,38 @@ public class MainWindow extends JFrame {
     private JMenu helpMenu;
     private JMenuItem aboutItem;
 
+    private boolean dataLoaded;
+
+    private void markDataLoaded() {
+        launchSGDItem.setEnabled(true);
+        makePredictionItem.setEnabled(true);
+        showDataset.setEnabled(true);
+        dataLoaded = true;
+    }
+
+    private void markDataNotLoaded() {
+        launchSGDItem.setEnabled(false);
+        makePredictionItem.setEnabled(false);
+        showDataset.setEnabled(false);
+        dataLoaded = false;
+    }
+
+    private void markNetworkLoaded() {
+        addLayerItem.setEnabled(true);
+        loadDataItem.setEnabled(true);
+        saveItem.setEnabled(true);
+        closeItem.setEnabled(true);
+        showNetwork.setEnabled(true);
+    }
+
+    private void markNetworkNotLoaded() {
+        addLayerItem.setEnabled(false);
+        launchSGDItem.setEnabled(false);
+        makePredictionItem.setEnabled(false);
+        showNetwork.setEnabled(false);
+        saveItem.setEnabled(false);
+        closeItem.setEnabled(false);
+    }
 
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
@@ -85,7 +123,6 @@ public class MainWindow extends JFrame {
             fd.setVisible(true);
             if (fd.getFile() != null) {
                 loadNeuralNetwork(fd.getDirectory() + fd.getFile());
-                saveItem.setEnabled(true);
             }
         });
         fileMenu.add(openItem);
@@ -107,6 +144,16 @@ public class MainWindow extends JFrame {
 
         closeItem = new JMenuItem("Close");
         closeItem.setFont(font);
+        closeItem.setEnabled(false);
+        closeItem.addActionListener(e -> {
+            clearScreen();
+            layersList.clear();
+
+            markNetworkNotLoaded();
+
+            revalidate();
+            repaint();
+        });
         fileMenu.add(closeItem);
 
         fileMenu.addSeparator();
@@ -121,11 +168,18 @@ public class MainWindow extends JFrame {
         viewMenu.setFont(font);
         viewMenu.setPreferredSize(new Dimension(50, 25));
 
-        paintItem = new JMenuItem("Paint");
-        paintItem.setFont(font);
-        paintItem.setPreferredSize(new Dimension(160, 25));
-        viewMenu.add(paintItem);
-        paintItem.addActionListener(e -> {
+        showNetwork = new JMenuItem("Display network");
+        showNetwork.setFont(font);
+        showNetwork.setPreferredSize(new Dimension(160, 25));
+        showNetwork.addActionListener(e -> {
+            clearScreen();
+            repaintNetwork();
+        });
+        viewMenu.add(showNetwork);
+
+        showDataset = new JMenuItem("Display dataset");
+        showDataset.setFont(font);
+        showDataset.addActionListener(e -> {
             try {
                 clearScreen();
                 paintImages();
@@ -133,6 +187,7 @@ public class MainWindow extends JFrame {
                 e1.printStackTrace();
             }
         });
+        viewMenu.add(showDataset);
 
         constructorMenu = new JMenu("Constructor");
         constructorMenu.setFont(font);
@@ -144,10 +199,8 @@ public class MainWindow extends JFrame {
             clearScreen();
             initNeuralNetwork();
             repaintNetwork();
-            addLayerItem.setEnabled(true);
-            launchSGDItem.setEnabled(true);
-            makePredictionItem.setEnabled(true);
-            saveItem.setEnabled(true);
+
+            markNetworkLoaded();
         });
         constructorMenu.add(newNetworkItem);
 
@@ -169,6 +222,9 @@ public class MainWindow extends JFrame {
         loadDataItem = new JMenuItem("Load data...");
         loadDataItem.setFont(font);
         loadDataItem.setPreferredSize(new Dimension(160, 25));
+        loadDataItem.addActionListener(e -> {
+            loadDataset();
+        });
         dataMenu.add(loadDataItem);
 
         netMenu = new JMenu("Network");
@@ -201,9 +257,12 @@ public class MainWindow extends JFrame {
         aboutItem.setFont(font);
         aboutItem.setPreferredSize(new Dimension(160, 25));
         aboutItem.addActionListener(e -> {
-            JOptionPane.showMessageDialog(null, "JNNet - Java Neural Net library\nVolodymyr Fomenko IP-42", "Author", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "JNNet - Java Neural Net library\nVolodymyr Fomenko IP-42", "Info", JOptionPane.INFORMATION_MESSAGE);
         });
         helpMenu.add(aboutItem);
+
+        markNetworkNotLoaded();
+        markDataNotLoaded();
 
         menuBar.add(fileMenu);
         menuBar.add(viewMenu);
@@ -215,41 +274,13 @@ public class MainWindow extends JFrame {
         return menuBar;
     }
 
-    private class MovingAdapter extends MouseAdapter {
-        private Point mouseCoords;
-        private Point coordinates;
-        private JComponent object;
-
-        public MovingAdapter(JComponent object) {
-            this.object = object;
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent e) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                object.setLocation(coordinates.x + e.getXOnScreen() - mouseCoords.x, coordinates.y + e.getYOnScreen() - mouseCoords.y);
-                repaint();
-            }
-        }
-
-        @Override
-        public void mousePressed(MouseEvent e) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                coordinates = object.getLocation();
-                mouseCoords = e.getLocationOnScreen();
-            }
-        }
-    }
-
     private void paintImages() throws Exception {
-        InputStream inputStream = new FileInputStream(new File("res/data/mnist/train.csv"));
-        List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 32);
-        DataCompressor.compressData(data, 28, 14);
+        Random random = new Random();
 
-        data.get(0).getFirst().saveToFile(new FileOutputStream(new File("res/img/pic0.jnnpg")));
+        //data.get(0).getFirst().saveToFile(new FileOutputStream(new File("res/img/pic0.jnnpg")));
 
         for (int pictureID = 0; pictureID < 32; ++pictureID) {
-            double[] values = data.get(pictureID).getFirst().toArray();
+            double[] values = data.get(random.nextInt(data.size())).getFirst().toArray();
             for (int i = 0; i < values.length; ++i) {
                 values[i] /= 255.0;
             }
@@ -257,20 +288,18 @@ public class MainWindow extends JFrame {
             int x = pictureID % 8;
             int y = pictureID / 8;
 
-            InputPicture picture = new InputPicture(values, 5);
+            VectorPicture picture = new VectorPicture(values, 5, this);
             int scale = 100;
-            picture.setBounds(250 + scale * x, 90 + scale * y, scale, scale);
+            picture.setBounds(270 + scale * x, 90 + scale * y, scale, scale);
             mainPanel.add(picture);
-            MovingAdapter movingAdapter = new MovingAdapter(picture);
-            picture.addMouseListener(movingAdapter);
-            picture.addMouseMotionListener(movingAdapter);
         }
 
         revalidate();
         repaint();
     }
 
-    StyledList layersList;
+    private StyledList layersList;
+    private StyledList dataInfoList;
 
     private void addLeftPanel() {
         leftPanel = new JPanel(null);
@@ -279,11 +308,36 @@ public class MainWindow extends JFrame {
         leftPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 1, new Color(160, 160, 160)));
         leftPanel.setBackground(new Color(255, 255, 255));
 
-        leftPanel.add(new StyledLabel("Object browser", 250, new Color(232, 232, 232), new Color(160, 160, 160), 0, 0, 1, 1));
+        layersList = new StyledList(0, 20, 249, true, this);
+        StyledLabel netBrowserLabel = new StyledLabel(
+                "Network browser", 9, 0, 250, 18, new Color(232, 232, 232), new Color(160, 160, 160), 0, 0, 1, 1
+        );
+        leftPanel.add(netBrowserLabel);
 
-        layersList = new StyledList(0, 20, 249, this);
+        StyledLabel dataInfoLabel = new StyledLabel(
+                "Dataset information", 9, 460, 250, 18, new Color(232, 232, 232), new Color(160, 160, 160), 1, 0, 1, 1
+        );
+        leftPanel.add(dataInfoLabel);
+
+        StyledList dataList = new StyledList(0, 480, 130, false, this);
+        dataList.add("Dataset name");
+        dataList.add("Dataset size");
+        dataList.add("Train size");
+        dataList.add("Test size");
+        dataList.add("Features count");
+        dataList.add("Targets count");
+        add(dataList);
+
+        dataInfoList = new StyledList(130, 480, 119, false, this);
+        dataInfoList.add("None");
+        dataInfoList.add("None");
+        dataInfoList.add("None");
+        dataInfoList.add("None");
+        dataInfoList.add("None");
+        dataInfoList.add("None");
+        add(dataInfoList);
+
         add(layersList);
-
         add(leftPanel);
 
         revalidate();
@@ -303,7 +357,27 @@ public class MainWindow extends JFrame {
         repaint();
     }
 
-    JTextArea logsArea;
+    private JTextArea logsArea;
+
+    public void changeNetworkLayerSize(int layerID) {
+        int layerSize;
+        try {
+            layerSize = Integer.valueOf(JOptionPane.showInputDialog(this, "Enter layer size:"));
+        } catch (Exception exception) {
+            return;
+        }
+        List<Integer> layerSizes = net.getLayerSizes();
+        layerSizes.set(layerID, layerSize);
+        int[] primLayerSizes = new int[layerSizes.size()];
+        for (int i = 0; i < layerSizes.size(); ++i) {
+            primLayerSizes[i] = layerSizes.get(i);
+        }
+
+        net = new NeuralNetwork(layerSizes.size(), primLayerSizes, ActivationFunction.SIGMOID);
+
+        clearScreen();
+        repaintNetwork();
+    }
 
     private void addBottomPanel() {
         bottomPanel = new JPanel(null);
@@ -312,7 +386,7 @@ public class MainWindow extends JFrame {
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(160, 160, 160)));
         bottomPanel.setBackground(new Color(255, 255, 255));
 
-        bottomPanel.add(new StyledLabel("Logs", 1600, new Color(232, 232, 232), new Color(160, 160, 160), 1, 0, 1, 0));
+        bottomPanel.add(new StyledLabel("Logs", 9, 0, 1600, 18, new Color(232, 232, 232), new Color(160, 160, 160), 1, 0, 1, 0));
 
         JPanel leftSubPanel = new JPanel(null);
         leftSubPanel.setBounds(0, 20, 25, 300);
@@ -338,7 +412,23 @@ public class MainWindow extends JFrame {
         stopButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                sgd.stop();
+                if (net == null || sgdThread == null || !sgdFinished)
+                    return;
+
+                sgdThread.stop();
+                sgdFinished = true;
+                logsArea.append("\nInterrupting...\n\n");
+            }
+        });
+
+        JPanel clearButton = new ClearButton(null);
+        clearButton.setBounds(3, 43, 18, 18);
+        leftSubPanel.add(clearButton);
+
+        clearButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                logsArea.setText("");
             }
         });
 
@@ -409,111 +499,189 @@ public class MainWindow extends JFrame {
         addRightPanel();
         addBottomPanel();
         addMainPanel();
-
-        //exportImage("res/img/raw/me_28x28.jpg", "res/img/me_28x28.jnnpg");
     }
 
-    private void exportImage(String pathFrom, String pathTo) {
-        try {
-            File input = new File(pathFrom);
-            BufferedImage image = null;
-            image = ImageIO.read(input);
-            int width = image.getWidth();
-            int height = image.getHeight();
-            Vector2D pic = new Vector2D(width * height);
-            for (int i = 0; i < width; ++i) {
-                for (int j = 0; j < height; ++j) {
-                    pic.setVal(i * height + j, 255 - new Color(image.getRGB(j, i)).getRed());
+    private Thread sgdThread;
+    private boolean sgdFinished;
+
+    private Thread dataThread;
+
+    private void loadDataset() {
+        FileDialog fd = new FileDialog(this, "Choose dataset...", FileDialog.LOAD);
+        fd.setDirectory("res/data");
+        fd.setFilenameFilter((dir, name) -> name.endsWith(".jnndata"));
+        fd.setVisible(true);
+        if (fd.getFile() != null) {
+            dataThread = new Thread() {
+                @Override
+                public void run() {
+                    logsArea.append("Loading dataset...  ");
+                    loadDataItem.setEnabled(false);
+                    try {
+                        Scanner sc = new Scanner(new FileInputStream(new File(fd.getDirectory() + fd.getFile())));
+                        sc.useDelimiter("\n");
+                        String datasetName = sc.next();
+                        String datasetSize = sc.next();
+                        String trainSize = sc.next();
+                        String testSize = sc.next();
+                        String featuresCount = sc.next();
+                        String targetsCount = sc.next();
+                        sc.close();
+                        data = DataLoader.loadData(new FileInputStream(new File(fd.getDirectory() + fd.getFile())), 784, 10, 60000);
+                        logsArea.append("compressing dataset...  ");
+                        DataCompressor.compressData(data, 28, 14);
+                        loadDataItem.setEnabled(true);
+                        logsArea.append("finished.\n\n");
+                        dataInfoList.clear();
+                        dataInfoList.add(datasetName);
+                        dataInfoList.add(datasetSize);
+                        dataInfoList.add(trainSize);
+                        dataInfoList.add(testSize);
+                        dataInfoList.add(featuresCount);
+                        dataInfoList.add(targetsCount);
+                        markDataLoaded();
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-            pic.saveToFile(new FileOutputStream(new File(pathTo)));
-        }
-        catch (Exception e) {
-            e.printStackTrace();
+            };
+            dataThread.start();
         }
     }
 
-    Thread sgd;
+    private List<Pair<Vector2D>> data;
+
     public void launchSGD() {
-        sgd = new Thread() {
+        if (net == null || !dataLoaded)
+            return;
+
+        if (sgdThread != null && !sgdFinished) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Can't start new learning process before the previous one is running",
+                    "Info", JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        sgdFinished = false;
+
+        int numIterations;
+        double learningRate;
+        int batchSize;
+        Metrics metrics;
+        try {
+            JPanel p = new JPanel(new BorderLayout(5,5));
+
+            JPanel labels = new JPanel(new GridLayout(0,1,2,2));
+            labels.add(new JLabel("Number of iterations:", SwingConstants.RIGHT));
+            labels.add(new JLabel("Learning rate:", SwingConstants.RIGHT));
+            labels.add(new JLabel("Batch size:", SwingConstants.RIGHT));
+            labels.add(new JLabel("Metrics:", SwingConstants.RIGHT));
+            p.add(labels, BorderLayout.WEST);
+
+            JPanel controls = new JPanel(new GridLayout(0,1,2,2));
+
+            JTextField numIterationsField = new JTextField("20");
+            numIterationsField.setPreferredSize(new Dimension(140, 20));
+            controls.add(numIterationsField);
+
+            JTextField learningRateField = new JTextField("1");
+            learningRateField.addAncestorListener(new RequestFocusListener(false));
+            controls.add(learningRateField);
+
+            JTextField batchSizeField = new JTextField("128");
+            batchSizeField.addAncestorListener(new RequestFocusListener(false));
+            controls.add(batchSizeField);
+
+            String[] metricsList = { "Accuracy", "MSE" };
+
+            JComboBox metricsBox = new JComboBox(metricsList);
+            metricsBox.setSelectedIndex(0);
+            metricsBox.setLayout(null);
+            metricsBox.setFont(new Font("Monospace", Font.PLAIN, 14));
+            controls.add(metricsBox);
+
+            p.add(controls, BorderLayout.CENTER);
+
+            JOptionPane.showMessageDialog(
+                    this, p, "SGD training", JOptionPane.PLAIN_MESSAGE);
+
+            numIterations = Integer.valueOf(numIterationsField.getText());
+            learningRate = Double.valueOf(learningRateField.getText());
+            batchSize = Integer.valueOf(batchSizeField.getText());
+            if (metricsBox.getSelectedIndex() == 0)
+                metrics = Metrics.ACCURACY;
+            else
+                metrics = Metrics.MSE;
+        } catch (Exception exception) {
+            return;
+        }
+        sgdThread = new Thread() {
             public void run() {
-                PrintStream printStream = new PrintStream(new JTextAreaOutputStream(logsArea));
+                PrintStream logStream = new PrintStream(new TextAreaOutputStream(logsArea));
                 try {
-                    printStream.println("Launching stochastic gradient descent on MNIST dataset...\n");
+                    logStream.printf(
+                            "Launching stochastic gradient descent with parameters: " +
+                                    "(%d iterations, %.2f learning rate, %d batch size) on MNIST dataset...\n",
+                            numIterations, learningRate, batchSize);
 
-                    InputStream inputStream = new FileInputStream(new File("res/data/mnist/train.csv"));
-                    List<Pair<Vector2D>> data = DataLoader.loadData(inputStream, 784, 10, 10000);
-                    DataCompressor.compressData(data, 28, 14);
+                    data.get(0).getFirst().saveAsImageToFile(new File("res/img/numbers/pic0.jpg"), 14, 14);
+                    data.get(1).getFirst().saveAsImageToFile(new File("res/img/numbers/pic1.jpg"), 14, 14);
+                    data.get(2).getFirst().saveAsImageToFile(new File("res/img/numbers/pic2.jpg"), 14, 14);
+                    data.get(3).getFirst().saveAsImageToFile(new File("res/img/numbers/pic3.jpg"), 14, 14);
+                    data.get(4).getFirst().saveAsImageToFile(new File("res/img/numbers/pic4.jpg"), 14, 14);
+                    data.get(5).getFirst().saveAsImageToFile(new File("res/img/numbers/pic5.jpg"), 14, 14);
+                    data.get(6).getFirst().saveAsImageToFile(new File("res/img/numbers/pic6.jpg"), 14, 14);
+                    data.get(7).getFirst().saveAsImageToFile(new File("res/img/numbers/pic7.jpg"), 14, 14);
+                    data.get(8).getFirst().saveAsImageToFile(new File("res/img/numbers/pic8.jpg"), 14, 14);
+                    data.get(9).getFirst().saveAsImageToFile(new File("res/img/numbers/pic9.jpg"), 14, 14);
+                    data.get(10).getFirst().saveAsImageToFile(new File("res/img/numbers/pic10.jpg"), 14, 14);
 
-                    List<Pair<Vector2D>> trainData = data;
-                    List<Pair<Vector2D>> testData = data;
+                    List<Pair<Vector2D>> trainData = data.subList(0, 800);
+                    List<Pair<Vector2D>> testData = data.subList(800, 1000);
 
-                    net.launchSGD(trainData, testData, 10, 100, 1, Metrics.ACCURACY, printStream);
+                    net.launchSGD(trainData, testData, numIterations, batchSize, learningRate, metrics, logStream);
                 } catch (Exception e) {
                     e.printStackTrace();
                     return;
                 }
-                printStream.println();
-                printStream.close();
+                logStream.print("\nFinished training.\n");
+                logStream.println();
+                logStream.close();
+
+                sgdFinished = true;
             }
         };
 
-        sgd.start();
-    }
-
-    public class JTextAreaOutputStream extends OutputStream {
-        private final JTextArea destination;
-
-        public JTextAreaOutputStream(JTextArea destination) {
-            if (destination == null) {
-                throw new IllegalArgumentException("Destination is null");
-            }
-
-            this.destination = destination;
-        }
-
-        @Override
-        public void write(byte[] buffer, int offset, int length) throws IOException {
-            final String text = new String(buffer, offset, length);
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    destination.append(text);
-                }
-            });
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            write(new byte[] {(byte) b}, 0, 1);
-        }
+        sgdThread.start();
     }
 
     public void makeNetworkPrediction() {
         FileDialog fd = new FileDialog(this, "Choose a picture", FileDialog.LOAD);
-        fd.setFilenameFilter((dir, name) -> name.endsWith(".jnnpg"));
+        fd.setDirectory("res/img/jpg");
+        fd.setFilenameFilter((dir, name) -> name.endsWith(".jpg"));
         fd.setVisible(true);
         if (fd.getFile() != null) {
             clearScreen();
             try {
-                Vector2D pic = Vector2D.readFromFile(new FileInputStream(new File(fd.getDirectory() + fd.getFile())));
+                Vector2D pic = Vector2D.readFromImage(new File(fd.getDirectory() + fd.getFile()));
 
                 double[] values = pic.toArray();
+
                 for (int i = 0; i < values.length; ++i) {
                     values[i] /= 255.0;
                 }
                 int scale = 15;
-                InputPicture picture = new InputPicture(values, scale);
+                VectorPicture picture = new VectorPicture(values, scale, this);
                 picture.setBounds(400, 200, 14 * scale + 1, 14 * scale + 1);
+
                 mainPanel.add(picture);
-                MovingAdapter movingAdapter = new MovingAdapter(picture);
-                picture.addMouseListener(movingAdapter);
-                picture.addMouseMotionListener(movingAdapter);
 
                 Vector2D prediction = net.makePredictions(pic);
                 System.out.println(prediction.getArgMax().getFirst());
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -530,10 +698,6 @@ public class MainWindow extends JFrame {
             Layer layer = new Layer("Layer " + (i + 1), i, layerSizes.get(i), (i == 0 ? Layer.MARK_FIRST : i == layersCount - 1 ? Layer.MARK_LAST : Layer.MARK_REGULAR), this);
             layer.setBounds((int) (segmentWidth * i + (segmentWidth - Layer.WIDTH) / 2.0), 100, Layer.WIDTH + 1, Layer.HEIGHT + 1);
             mainPanel.add(layer);
-
-            MovingAdapter movingAdapter = new MovingAdapter(layer);
-            layer.addMouseListener(movingAdapter);
-            layer.addMouseMotionListener(movingAdapter);
 
             layers.add(layer);
         }
@@ -565,6 +729,7 @@ public class MainWindow extends JFrame {
             return;
         }
 
+        markNetworkLoaded();
         clearScreen();
         repaintNetwork();
     }
@@ -580,7 +745,7 @@ public class MainWindow extends JFrame {
     private void addNetworkLayer() {
         int layerSize;
         try {
-            layerSize = Integer.valueOf(JOptionPane.showInputDialog(this, "Specify layer size"));
+            layerSize = Integer.valueOf(JOptionPane.showInputDialog(this, "Enter layer size:"));
         } catch (Exception exception) {
             return;
         }

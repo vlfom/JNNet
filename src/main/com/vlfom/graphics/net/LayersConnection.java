@@ -18,13 +18,10 @@ public class LayersConnection extends JComponent {
     }
 
     private void drawArrow(Graphics2D g2, Point tail, Point head) {
-        Stroke dashed = new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5}, 0);
+        Stroke dashed = new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[] {5}, 0);
         g2.setStroke(dashed);
 
-        g2.drawLine(
-                (int) tail.getX(), (int) tail.getY(),
-                (int) head.getX(), (int) head.getY()
-        );
+        g2.drawLine((int) tail.getX(), (int) tail.getY(), (int) head.getX(), (int) head.getY());
 
         double phi = Math.toRadians(40);
         int barb = 10;
@@ -37,7 +34,7 @@ public class LayersConnection extends JComponent {
         x[1] = (int) (head.x - barb * Math.cos(theta + phi));
         x[2] = (int) (head.x - barb * Math.cos(theta - phi));
         y[0] = head.y;
-        y[1] = (int) (head.y- barb * Math.sin(theta + phi));
+        y[1] = (int) (head.y - barb * Math.sin(theta + phi));
         y[2] = (int) (head.y - barb * Math.sin(theta - phi));
         g2.fillPolygon(x, y, 3);
     }

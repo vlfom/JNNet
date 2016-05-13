@@ -27,15 +27,11 @@ public class DataGenerator {
                     d = 1;
                 }
                 data.add(new Pair<>(new Vector2D(new double[] {a, b}), new Vector2D(new double[] {c, d})));
-            }
-            else if (dataType == 1){
+            } else if (dataType == 1) {
                 data.add(new Pair<>(
                         new Vector2D(new double[] {a, b}),
-                        new Vector2D(new double[] {
-                                Math.pow(a * b, b) + Math.sin(a) * Math.cos(b) +
-                                        Math.exp(a) * Math.acos(b) + Math.random()
-                        })
-                ));
+                        new Vector2D(new double[] {Math.pow(a * b, b) + Math.sin(a) * Math.cos(b) +
+                                Math.exp(a) * Math.acos(b) + Math.random()})));
             }
         }
         return data;

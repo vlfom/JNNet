@@ -1,5 +1,6 @@
 package com.vlfom.graphics.net;
 
+import com.vlfom.graphics.mouse.MovingAdapter;
 import com.vlfom.graphics.window.MainWindow;
 
 import javax.swing.*;
@@ -34,13 +35,26 @@ public class Layer extends JComponent {
         addMouseListener(new MyAdapter());
 
         popupMenu = new JPopupMenu();
-        JMenuItem txtFileItem = new JMenuItem("Remove layer");
+
+        JMenuItem changeLayerItem = new JMenuItem("Change size...");
         Font font = new Font("Monospace", Font.PLAIN, 14);
-        txtFileItem.setFont(font);
-        txtFileItem.setPreferredSize(new Dimension(140, 25));
-        txtFileItem.addMouseListener(new MovingAdapter(mainWindow));
-        txtFileItem.addMouseMotionListener(new MovingAdapter(mainWindow));
-        popupMenu.add(txtFileItem);
+        changeLayerItem.setFont(font);
+        changeLayerItem.setPreferredSize(new Dimension(140, 25));
+        changeLayerItem.addMouseListener(new ClickAdapter(mainWindow, 0));
+        changeLayerItem.addMouseMotionListener(new ClickAdapter(mainWindow, 0));
+        popupMenu.add(changeLayerItem);
+
+        JMenuItem removeLayerItem = new JMenuItem("Remove layer");
+        removeLayerItem.setFont(font);
+        removeLayerItem.setPreferredSize(new Dimension(140, 25));
+        removeLayerItem.addMouseListener(new ClickAdapter(mainWindow, 1));
+        removeLayerItem.addMouseMotionListener(new ClickAdapter(mainWindow, 1));
+        popupMenu.add(removeLayerItem);
+
+
+        MovingAdapter movingAdapter = new MovingAdapter(this, mainWindow);
+        addMouseListener(movingAdapter);
+        addMouseMotionListener(movingAdapter);
     }
 
     public void paint(Graphics g) {
@@ -83,16 +97,22 @@ public class Layer extends JComponent {
         }
     }
 
-    private class MovingAdapter extends MouseAdapter {
+    private class ClickAdapter extends MouseAdapter {
         private MainWindow window;
+        private int type;
 
-        public MovingAdapter(MainWindow window) {
+        public ClickAdapter(MainWindow window, int type) {
             this.window = window;
+            this.type = type;
         }
 
         @Override
         public void mousePressed (MouseEvent e) {
-            window.removeNetworkLayer(layerID);
+            if (type == 0) {
+                window.changeNetworkLayerSize(layerID);
+            }
+            else if (type == 1)
+                window.removeNetworkLayer(layerID);
         }
     }
 }

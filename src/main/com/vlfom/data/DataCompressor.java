@@ -16,18 +16,16 @@ public class DataCompressor {
     public static void compressData(List<Pair<Vector2D>> data, int oldSize, int newSize) {
         double[] values;
         double[] newValues;
-        for (int i = 0; i < data.size(); ++i) {
-            values = data.get(i).getFirst().toArray();
+        for (Pair<Vector2D> aData : data) {
+            values = aData.getFirst().toArray();
             newValues = new double[newSize * newSize];
             for (int w = 0; w < newSize; ++w) {
                 for (int h = 0; h < newSize; ++h) {
-                    newValues[w * newSize + h] = (
-                            values[2 * w * oldSize + 2 * h] + values[2 * w * oldSize + oldSize + 2 * h] +
-                            values[2 * w * oldSize + 2 * h + 1] + values[2 * w * oldSize + oldSize + 2 * h + 1]
-                    ) / 4.0;
+                    newValues[w * newSize + h] = (values[2 * w * oldSize + 2 * h] + values[2 * w * oldSize + oldSize + 2 * h] +
+                            values[2 * w * oldSize + 2 * h + 1] + values[2 * w * oldSize + oldSize + 2 * h + 1]) / 4.0;
                 }
             }
-            data.get(i).setFirst(new Vector2D(newValues));
+            aData.setFirst(new Vector2D(newValues));
         }
     }
 }

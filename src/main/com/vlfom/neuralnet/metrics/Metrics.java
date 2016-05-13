@@ -10,10 +10,10 @@ import java.util.List;
 /**
  * Created by @vlfom.
  */
-public abstract class Metrics  implements Serializable {
+public abstract class Metrics implements Serializable {
     public final static Metrics ACCURACY = new Metrics() {
         @Override
-        public double evaluateScore (NeuralNetwork net, List<Pair<Vector2D>> testData) {
+        public double evaluateScore(NeuralNetwork net, List<Pair<Vector2D>> testData) {
             Vector2D caseResult;
             int score = 0;
             for (Pair<Vector2D> testCase : testData) {
@@ -33,7 +33,7 @@ public abstract class Metrics  implements Serializable {
 
     public final static Metrics F1_SCORE = new Metrics() {
         @Override
-        public double evaluateScore (NeuralNetwork net, List<Pair<Vector2D>> testData) {
+        public double evaluateScore(NeuralNetwork net, List<Pair<Vector2D>> testData) {
             Vector2D caseResult;
             int testSize = testData.size();
             int positiveExamplesSize = 0;
@@ -43,8 +43,9 @@ public abstract class Metrics  implements Serializable {
                 caseResult = net.makePredictions(testCase.getFirst());
                 if (testCase.getSecond().getArgMax().getFirst() == 1) {
                     positiveExamplesSize += 1;
-                    if (caseResult.getArgMax().equals(testCase.getSecond().getArgMax()))
+                    if (caseResult.getArgMax().equals(testCase.getSecond().getArgMax())) {
                         recall += 1;
+                    }
                 }
                 if (caseResult.getArgMax().equals(testCase.getSecond().getArgMax())) {
                     precision += 1;
@@ -63,14 +64,15 @@ public abstract class Metrics  implements Serializable {
 
     public final static Metrics MSE = new Metrics() {
         @Override
-        public double evaluateScore (NeuralNetwork net, List<Pair<Vector2D>> testData) {
+        public double evaluateScore(NeuralNetwork net, List<Pair<Vector2D>> testData) {
             Vector2D caseResult;
             int len = testData.get(0).getSecond().getL1();
             double score = 0;
             for (Pair<Vector2D> testCase : testData) {
                 caseResult = net.makePredictions(testCase.getFirst());
-                for (int i = 0; i < len; ++i)
+                for (int i = 0; i < len; ++i) {
                     score += Math.pow(caseResult.getVal(i) - testCase.getSecond().getVal(i), 2);
+                }
             }
             return score * 1.0 / (len * testData.size());
         }
@@ -82,5 +84,6 @@ public abstract class Metrics  implements Serializable {
     };
 
     public abstract double evaluateScore(NeuralNetwork net, List<Pair<Vector2D>> testData);
+
     public abstract String getName();
 }

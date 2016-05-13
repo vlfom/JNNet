@@ -155,7 +155,7 @@ public class NeuralNetwork implements Serializable {
             for (int i = batchSize; i <= trainData.size(); i += batchSize) {
                 updateMiniBatch(trainData.subList(i - batchSize, i), learningRate);
             }
-            printStream.printf("Finished epoch:  %d.      " + metrics.getName() + " :  %.3f.\n", e, metrics.evaluateScore(this, testData));
+            printStream.printf("Finished epoch:  %d.      " + metrics.getName() + " :  %.3f.\n", e + 1, metrics.evaluateScore(this, testData));
         }
     }
 

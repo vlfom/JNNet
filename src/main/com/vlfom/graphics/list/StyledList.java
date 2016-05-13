@@ -19,33 +19,46 @@ public class StyledList extends JPanel {
     private int x, y;
     private int selectedItem;
     private JPopupMenu popupMenu;
+    private boolean interactive;
     private MainWindow mainWindow;
 
-    public StyledList(int x, int y, int width, MainWindow mainWindow) {
+    public StyledList(int x, int y, int width, boolean interactive, MainWindow mainWindow) {
         this.x = x;
         this.y = y;
         this.width = width;
+        this.interactive = interactive;
         this.mainWindow = mainWindow;
 
         selectedItem = -1;
         items = new ArrayList<>();
         setLayout(null);
 
-        popupMenu = new JPopupMenu();
-        JMenuItem txtFileItem = new JMenuItem("Remove layer");
-        Font font = new Font("Monospace", Font.PLAIN, 14);
-        txtFileItem.setFont(font);
-        txtFileItem.setPreferredSize(new Dimension(140, 25));
-        txtFileItem.addMouseListener(new MenuAdapter(mainWindow));
-        txtFileItem.addMouseMotionListener(new MenuAdapter(mainWindow));
-        popupMenu.add(txtFileItem);
+        if (interactive) {
+
+            popupMenu = new JPopupMenu();
+
+            JMenuItem changeSizeItem = new JMenuItem("Change size...");
+            Font font = new Font("Monospace", Font.PLAIN, 14);
+            changeSizeItem.setFont(font);
+            changeSizeItem.setPreferredSize(new Dimension(140, 25));
+            changeSizeItem.addMouseListener(new MenuAdapter(mainWindow, 0));
+            changeSizeItem.addMouseMotionListener(new MenuAdapter(mainWindow, 0));
+            popupMenu.add(changeSizeItem);
+
+            JMenuItem removeLayerItem = new JMenuItem("Remove layer");
+            removeLayerItem.setFont(font);
+            removeLayerItem.setPreferredSize(new Dimension(140, 25));
+            removeLayerItem.addMouseListener(new MenuAdapter(mainWindow, 1));
+            removeLayerItem.addMouseMotionListener(new MenuAdapter(mainWindow, 1));
+            popupMenu.add(removeLayerItem);
+        }
+
     }
 
     public void add(String name) {
-        StyledLabel item = new StyledLabel(
-                name, width, Color.white, new Color(232, 232, 232), 0, 1, 1, 1
-        );
-        item.addMouseListener(new ListItemMouseListener(this, item, items.size()));
+        StyledLabel item = new StyledLabel(name, 9, 0, width, 18, Color.white, new Color(232, 232, 232), 0, 1, 1, 1);
+        if (interactive)
+            item.addMouseListener(new ListItemMouseListener(this, item, items.size()));
         items.add(item);
         redraw();
     }
@@ -71,6 +84,7 @@ public class StyledList extends JPanel {
         removeAll();
         items.clear();
         selectedItem = -1;
+        setBounds(x, y, width, 20 * items.size());
     }
 
     private class ListItemMouseListener extends MouseAdapter {
@@ -85,7 +99,7 @@ public class StyledList extends JPanel {
         }
 
         @Override
-        public void mousePressed (MouseEvent e) {
+        public void mousePressed(MouseEvent e) {
             unselectItem();
             item.setBackground(new Color(230, 230, 250));
             list.selectedItem = itemIndex;
@@ -97,14 +111,20 @@ public class StyledList extends JPanel {
 
     private class MenuAdapter extends MouseAdapter {
         private MainWindow window;
+        private int type;
 
-        public MenuAdapter(MainWindow window) {
+        public MenuAdapter(MainWindow window, int type) {
             this.window = window;
+            this.type = type;
         }
 
         @Override
         public void mousePressed (MouseEvent e) {
-            window.removeNetworkLayer(selectedItem);
+            if (type == 0) {
+                window.changeNetworkLayerSize(selectedItem);
+            }
+            else if (type == 1)
+                window.removeNetworkLayer(selectedItem);
             selectedItem = -1;
         }
     }
